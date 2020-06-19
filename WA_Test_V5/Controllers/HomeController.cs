@@ -3,6 +3,7 @@ using System.Linq;
 using System.Web.Mvc;
 using WA_Test_V5.GetData.Excel;
 using WA_Test_V5.Interface.JsTreeNodes;
+using WA_Test_V5.Interface.TreeView;
 
 namespace WA_Test_V5.Controllers
 {
@@ -17,46 +18,19 @@ namespace WA_Test_V5.Controllers
         public JsonResult GetTreeView()
         {
             var parser = new GetExcelData(Server.MapPath("~/Content/Data.xlsx"));
-            var _TreeView = parser.GetData();
-
-            int nodeUnicID = 0;
-            var ParentsDic = new Dictionary<int, string>();//no
-            var ReadyList = new List<JsTree3Node>();
-            var mainNode = new JsTree3Node()
-            {
-                id = "0",
-                text = "Портфель проектов",
-                state = new State(true, false, false),
-                children = new List<JsTree3Node>(),
-                data = 0
-            };
-            ReadyList.Add(mainNode);
-            ParentsDic.Add(nodeUnicID, "0");
-            nodeUnicID++;
-            foreach (var elem in _TreeView)
-            {
-                var newNode = new JsTree3Node()
-                {
-                    id = elem.ID,
-                    text = elem.Name,
-                    state = new State(false, false, false),
-                    children = new List<JsTree3Node>(),
-                    data = elem.CID
-                };
-                if (ParentsDic.ContainsValue(elem.Parent_ID.ToString()))
-                    ReadyList[ParentsDic.FirstOrDefault(x => x.Value == elem.Parent_ID.ToString()).Key].children.Add(newNode);
-
-                ReadyList.Add(newNode);
-                ParentsDic.Add(nodeUnicID, elem.ID.ToString());
-                nodeUnicID++;
-            }
-            return Json(mainNode, JsonRequestBehavior.AllowGet);
+            var treeView = parser.GetData();
+            return GetJSTreeNode(treeView);
         }
 
         public JsonResult GetTreeViewSample()
         {
             var parser = new GetExcelData(Server.MapPath("~/Content/SampleData.xlsx"));
             var _SampleTreeView = parser.GetSample();
+            return GetJSTreeNode(_SampleTreeView);
+        }
+
+        private JsonResult GetJSTreeNode(List<TreeViewElements> treeView)
+        {
             int nodeUnicID = 0;
             var ParentsDic = new Dictionary<int, string>();//no
             var ReadyList = new List<JsTree3Node>();
@@ -71,7 +45,7 @@ namespace WA_Test_V5.Controllers
             ReadyList.Add(mainNode);
             ParentsDic.Add(nodeUnicID, "0");
             nodeUnicID++;
-            foreach (var elem in _SampleTreeView)
+            foreach (var elem in treeView)
             {
                 var newNode = new JsTree3Node()
                 {
