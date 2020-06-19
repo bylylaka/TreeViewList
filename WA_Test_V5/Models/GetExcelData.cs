@@ -4,9 +4,6 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using WA_Test_V5.Interface.TreeView;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Collections.Specialized;
 
 namespace WA_Test_V5.GetData.Excel
 {
@@ -58,7 +55,7 @@ namespace WA_Test_V5.GetData.Excel
 
 
 
-            var dictionary = new Dictionary<string, object>();
+            var dictionary = new SortedDictionary<string, object>();
 
             for (int i = 2; i <= sheet.Dimension.Rows; i++)
             {
@@ -88,9 +85,9 @@ namespace WA_Test_V5.GetData.Excel
             int inherritanceLevel,
             string parentId = "0")
         {
-            if (dictionary is Dictionary<string, List<string>>)
+            if (dictionary is SortedDictionary<string, List<string>>)
             {
-                var d2 = (Dictionary<string, List<string>>)dictionary;
+                var d2 = (SortedDictionary<string, List<string>>)dictionary;
 
                 foreach (var key in d2.Keys)
                 {
@@ -111,14 +108,15 @@ namespace WA_Test_V5.GetData.Excel
                             Parent_ID = parentId,
                             CID = int.Parse(key2) // unsafe
                         });
+
+                        increment++;
                     }
-                    increment++;
                 }
                 return;
             }
-            if (dictionary is Dictionary<string, object>)
+            if (dictionary is SortedDictionary<string, object>)
             {
-                var d1 = (Dictionary<string, object>)dictionary;
+                var d1 = (SortedDictionary<string, object>)dictionary;
 
                 foreach (var key in d1.Keys)
                 {
@@ -127,35 +125,36 @@ namespace WA_Test_V5.GetData.Excel
                         ID = increment.ToString(),
                         Name = key,
                         Parent_ID = parentId,
-                        CID = inherritanceLevel == sheet.Dimension.End.Column - 1 ? 0 : -2 //CHANGE 0
+                        CID = -2
                     });
 
-                    Read(d1[key], treeViewElements, inherritanceLevel + 1, increment.ToString());
                     increment++;
+
+                    Read(d1[key], treeViewElements, inherritanceLevel + 1, (increment - 1).ToString());
                 }
                 return;
             }
         }
 
         // TODO: consider using HybridDictionary
-        private void AddRow(int row, int column, Dictionary<string, object> dictionary)
+        private void AddRow(int row, int column, SortedDictionary<string, object> dictionary)
         {
             if (column == sheet.Dimension.End.Column - 2)
             {
                 if (!dictionary.ContainsKey(sheet.GetValue(row, column).ToString()))
                 {
-                    dictionary[sheet.GetValue(row, column).ToString()] = new Dictionary<string, List<string>>();
+                    dictionary[sheet.GetValue(row, column).ToString()] = new SortedDictionary<string, List<string>>();
                 }
 
-                if (!((Dictionary<string, List<string>>)dictionary[sheet.GetValue(row, column).ToString()])
+                if (!((SortedDictionary<string, List<string>>)dictionary[sheet.GetValue(row, column).ToString()])
                     .ContainsKey(sheet.GetValue(row, column + 1).ToString()))
                 {
-                    ((Dictionary<string, List<string>>)dictionary[sheet.GetValue(row, column).ToString()])
+                    ((SortedDictionary<string, List<string>>)dictionary[sheet.GetValue(row, column).ToString()])
                                         [sheet.GetValue(row, column + 1).ToString()] = new List<string>();
                 }
 
                 //TODO: учесть, что строки могут повторяться
-                ((Dictionary<string, List<string>>)dictionary[sheet.GetValue(row, column).ToString()])
+                ((SortedDictionary<string, List<string>>)dictionary[sheet.GetValue(row, column).ToString()])
                     [sheet.GetValue(row, column + 1).ToString()]
                     .Add(sheet.GetValue(row, column + 2).ToString());
 
@@ -164,10 +163,10 @@ namespace WA_Test_V5.GetData.Excel
 
             if (!dictionary.ContainsKey(sheet.GetValue(row, column).ToString()))
             {
-                dictionary[sheet.GetValue(row, column).ToString()] = new Dictionary<string, object>();
+                dictionary[sheet.GetValue(row, column).ToString()] = new SortedDictionary<string, object>();
             }
 
-            AddRow(row, column + 1, (Dictionary<string, object>)dictionary[sheet.GetValue(row, column).ToString()]);
+            AddRow(row, column + 1, (SortedDictionary<string, object>)dictionary[sheet.GetValue(row, column).ToString()]);
         }
     }
 }
