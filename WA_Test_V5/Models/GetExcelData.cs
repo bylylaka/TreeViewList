@@ -10,7 +10,9 @@
 	public class GetExcelData
 	{
 		private readonly ExcelWorksheet sheet;
-		private int increment = 1;//TODO: make concurrent safety
+
+		private int increment = 1;
+
 		private const int defaultCID = -2;
 
 		public GetExcelData(string filePath)
@@ -30,7 +32,7 @@
 			var numberOfRows = sheet.Dimension.End.Row;
 			var Cells = sheet.Cells;
 			var _SampleTreeView = new List<TreeViewElements>();
-			for (int rowIterator = 2; rowIterator <= numberOfRows; rowIterator++)
+			for (var rowIterator = 2; rowIterator <= numberOfRows; rowIterator++)
 			{
 				var e = new TreeViewElements()
 				{
@@ -48,35 +50,30 @@
 		{
 			var dictionary = new SortedDictionary<string, object>();
 
-			for (int i = 2; i <= sheet.Dimension.Rows; i++)
+			for (var i = 2; i <= sheet.Dimension.Rows; i++)
 			{
 				AddRowPartialData(i, 1, dictionary);
 			}
 
 			var _SampleTreeView = new List<TreeViewElements>();
-			Read(dictionary, _SampleTreeView, 0);
-
+			MapRowsDataToList(dictionary, _SampleTreeView, 0);
 			return _SampleTreeView;
 		}
 
-		private void Read(
-			object dictionary,
+		private void MapRowsDataToList(
+			SortedDictionary<string, object> dictionary,
 			List<TreeViewElements> treeViewElements,
 			int inherritanceLevel,
 			string parentId = "0")
 		{
-			if (dictionary is SortedDictionary<string, List<string>>)
+			if (inherritanceLevel == sheet.Dimension.Columns - 2)
 			{
-				// Может иметь вид
-				// dictionary is SortedDictionary<string, List<string>> as d2
-				// в более новой версии Microsoft.Net.Compilers (сейчас 1.3.2)
-				var d2 = (SortedDictionary<string, List<string>>)dictionary;
-				foreach (var key in d2.Keys)
+				foreach (var key in dictionary.Keys)
 				{
-					foreach (var key2 in d2[key])
+					foreach (var cId in (List<string>)dictionary[key])
 					{
 						if (treeViewElements.Any(
-							x => x.CID == int.Parse(key2) &&
+							x => x.CID == int.Parse(cId) &&
 							x.Name == key &&
 							x.Parent_ID == parentId))
 						{
@@ -88,7 +85,7 @@
 							ID = increment.ToString(),
 							Name = key,
 							Parent_ID = parentId,
-							CID = int.Parse(key2) // unsafe
+							CID = int.Parse(cId)
 						});
 
 						increment++;
@@ -96,49 +93,40 @@
 				}
 				return;
 			}
-			if (dictionary is SortedDictionary<string, object>)
+
+			foreach (var key in dictionary.Keys)
 			{
-				var d1 = (SortedDictionary<string, object>)dictionary;
-				foreach (var key in d1.Keys)
+				treeViewElements.Add(new TreeViewElements()
 				{
-					treeViewElements.Add(new TreeViewElements()
-					{
-						ID = increment.ToString(),
-						Name = key,
-						Parent_ID = parentId,
-						CID = defaultCID
-					});
+					ID = increment.ToString(),
+					Name = key,
+					Parent_ID = parentId,
+					CID = defaultCID
+				});
 
-					increment++;
+				increment++;
 
-					Read(d1[key], treeViewElements, inherritanceLevel + 1, (increment - 1).ToString());
-				}
-				return;
+				MapRowsDataToList(
+					(SortedDictionary<string, object>)dictionary[key],
+					treeViewElements, inherritanceLevel + 1,
+					(increment - 1).ToString());
 			}
+			return;
 		}
 
-		// TODO: consider using HybridDictionary
 		private void AddRowPartialData(int rowIndex, int columnIndex, SortedDictionary<string, object> dictionary)
 		{
 			var cellValue = sheet.GetValue(rowIndex, columnIndex).ToString();
 
-			if (columnIndex == sheet.Dimension.End.Column - 2)
+			if (columnIndex == sheet.Dimension.End.Column - 1)
 			{
 				if (!dictionary.ContainsKey(cellValue))
 				{
-					dictionary[cellValue] = new SortedDictionary<string, List<string>>();
+					dictionary[cellValue] = new List<string>();
 				}
 
-				if (!((SortedDictionary<string, List<string>>)dictionary[cellValue])
-					.ContainsKey(sheet.GetValue(rowIndex, columnIndex + 1).ToString()))
-				{
-					((SortedDictionary<string, List<string>>)dictionary[cellValue])
-										[sheet.GetValue(rowIndex, columnIndex + 1).ToString()] = new List<string>();
-				}
-
-				((SortedDictionary<string, List<string>>)dictionary[cellValue])
-					[sheet.GetValue(rowIndex, columnIndex + 1).ToString()]
-					.Add(sheet.GetValue(rowIndex, columnIndex + 2).ToString());
+				((List<string>)dictionary[cellValue])
+					.Add(sheet.GetValue(rowIndex, columnIndex + 1).ToString());
 
 				return;
 			}
